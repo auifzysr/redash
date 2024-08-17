@@ -28,6 +28,7 @@ def _job_lock_id(query_hash, data_source_id):
 def _unlock(query_hash, data_source_id):
     redis_connection.delete(_job_lock_id(query_hash, data_source_id))
 
+WORKER_TAG_PREFIX = "worker:"
 
 def enqueue_query(query, data_source, user_id, is_api_key=False, scheduled_query=None, metadata={}):
     query_hash = gen_query_hash(query)
@@ -76,8 +77,16 @@ def enqueue_query(query, data_source, user_id, is_api_key=False, scheduled_query
                     queue_name = data_source.scheduled_queue_name
                     scheduled_query_id = scheduled_query.id
                 else:
-                    queue_name = data_source.queue_name
+                    tags = metadata.pop("tags", None)
+                    if tags:
+                        for tag in tags:
+                            if tag.startswith(WORKER_TAG_PREFIX):
+                                queue_name = tag.replace(WORKER_TAG_PREFIX, "")
+                                break
+                    else:
+                        queue_name = data_source.queue_name
                     scheduled_query_id = None
+                logger.info("queue name: %s", queue_name)
 
                 time_limit = settings.dynamic_settings.query_time_limit(scheduled_query, user_id, data_source.org_id)
                 metadata["Queue"] = queue_name
