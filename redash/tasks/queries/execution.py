@@ -86,6 +86,8 @@ def enqueue_query(query, data_source, user_id, is_api_key=False, scheduled_query
                     else:
                         queue_name = data_source.queue_name
                     scheduled_query_id = None
+                if not queue_name:
+                    queue_name = "default"
                 logger.info("queue name: %s", queue_name)
 
                 time_limit = settings.dynamic_settings.query_time_limit(scheduled_query, user_id, data_source.org_id)
