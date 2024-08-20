@@ -35,6 +35,7 @@ ButtonTooltip.defaultProps = {
 
 export default function EditorControl({
   addParameterButtonProps,
+  dryRunButtonProps,
   formatButtonProps,
   saveButtonProps,
   executeButtonProps,
@@ -44,7 +45,7 @@ export default function EditorControl({
 }) {
   useEffect(() => {
     const buttons = filter(
-      [addParameterButtonProps, formatButtonProps, saveButtonProps, executeButtonProps],
+      [addParameterButtonProps, formatButtonProps, dryRunButtonProps, saveButtonProps, executeButtonProps],
       b => b.shortcut && isFunction(b.onClick)
     );
     if (buttons.length > 0) {
@@ -54,7 +55,7 @@ export default function EditorControl({
         KeyboardShortcuts.unbind(shortcuts);
       };
     }
-  }, [addParameterButtonProps, formatButtonProps, saveButtonProps, executeButtonProps]);
+  }, [addParameterButtonProps, formatButtonProps, dryRunButtonProps,saveButtonProps, executeButtonProps]);
 
   return (
     <div className="query-editor-controls">
@@ -64,6 +65,16 @@ export default function EditorControl({
             className="query-editor-controls-button m-r-5"
             disabled={addParameterButtonProps.disabled}
             onClick={addParameterButtonProps.onClick}>
+            {"{{"}&nbsp;{"}}"}
+          </Button>
+        </ButtonTooltip>
+      )}
+      {dryRunButtonProps !== false && (
+        <ButtonTooltip title={dryRunButtonProps.title} shortcut={dryRunButtonProps.shortcut}>
+          <Button
+            className="query-editor-controls-button m-r-5"
+            disabled={dryRunButtonProps.disabled}
+            onClick={dryRunButtonProps.onClick}>
             {"{{"}&nbsp;{"}}"}
           </Button>
         </ButtonTooltip>
@@ -145,6 +156,7 @@ const ButtonPropsPropType = PropTypes.oneOfType([
 
 EditorControl.propTypes = {
   addParameterButtonProps: ButtonPropsPropType,
+  dryRunButtonProps: ButtonPropsPropType,
   formatButtonProps: ButtonPropsPropType,
   saveButtonProps: ButtonPropsPropType,
   executeButtonProps: ButtonPropsPropType,
@@ -178,6 +190,7 @@ EditorControl.propTypes = {
 
 EditorControl.defaultProps = {
   addParameterButtonProps: false,
+  dryRunButtonProps: false,
   formatButtonProps: false,
   saveButtonProps: false,
   executeButtonProps: false,

@@ -45,6 +45,7 @@ import useUnsavedChangesAlert from "./hooks/useUnsavedChangesAlert";
 
 import "./components/QuerySourceDropdown"; // register QuerySourceDropdown
 import "./QuerySource.less";
+import { ConsoleSqlOutlined } from "@ant-design/icons";
 
 function chooseDataSourceId(dataSourceIds, availableDataSources) {
   availableDataSources = map(availableDataSources, ds => ds.id);
@@ -98,6 +99,7 @@ function QuerySource(props) {
   const updateQueryDescription = useUpdateQueryDescription(query, setQuery);
   const querySyntax = dataSource ? dataSource.syntax || "sql" : null;
   const isFormatQueryAvailable = queryFormat.isFormatQueryAvailable(querySyntax);
+  const isDryRunAvailable = dataSource ? dataSource.type === "bigquery" : false;
   const formatQuery = () => {
     try {
       const formattedQueryText = queryFormat.formatQuery(query.query, querySyntax);
@@ -280,6 +282,14 @@ function QuerySource(props) {
                           : "Query formatting is not supported for your Data Source syntax",
                         disabled: !dataSource || !isFormatQueryAvailable,
                         shortcut: isFormatQueryAvailable ? "mod+shift+f" : null,
+                        onClick: formatQuery,
+                      }}
+                      dryRunButtonProps={{
+                        title: isDryRunAvailable
+                          ? "Dry Run"
+                          : "Dry run is not supported for your Data Source",
+                        disabled: !dataSource || !isDryRunAvailable,
+                        shortcut: isDryRunAvailable ? "mod+shift+r" : null,
                         onClick: formatQuery,
                       }}
                       saveButtonProps={
