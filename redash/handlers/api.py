@@ -76,6 +76,7 @@ from redash.handlers.query_results import (
     QueryResultListResource,
     QueryResultResource,
 )
+from redash.handlers.bytes_processed import QueryBytesProcessedResource
 from redash.handlers.query_snippets import (
     QuerySnippetListResource,
     QuerySnippetResource,
@@ -244,6 +245,11 @@ api.add_org_resource(
     "/api/queries/<query_id>/results.<filetype>",
     "/api/queries/<query_id>/results/<query_result_id>.<filetype>",
     endpoint="query_result",
+)
+api.add_org_resource(
+    QueryBytesProcessedResource,
+    "/api/queries/<query_id>/bytes_processed",
+    endpoint="bytes_processed",
 )
 api.add_org_resource(
     JobResource,
