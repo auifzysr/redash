@@ -113,6 +113,7 @@ def dry_run_query(query, parameters, data_source, query_id, should_apply_auto_li
             metadata={
                 "Username": current_user.get_actual_user(),
                 "query_id": query_id,
+                "dry_run": True,
             },
         )
         return serialize_job(job)

@@ -55,7 +55,7 @@ error_messages = {
     "no_data_source": error_response("Target data source not available.", 401),
 }
 
-
+# TODO: add dry_run option arg
 def run_query(query, parameters, data_source, query_id, should_apply_auto_limit, max_age=0):
     if not data_source:
         return error_messages["no_data_source"]
@@ -108,6 +108,7 @@ def run_query(query, parameters, data_source, query_id, should_apply_auto_limit,
             metadata={
                 "Username": current_user.get_actual_user(),
                 "query_id": query_id,
+                # TODO: add dry_run flag
             },
         )
         return serialize_job(job)
@@ -213,6 +214,8 @@ class QueryDropdownsResource(BaseResource):
 
         return dropdown_values(dropdown_query_id, self.current_org)
 
+from redash.worker import get_job_logger
+logger = get_job_logger(__name__)
 
 class QueryResultResource(BaseResource):
     @staticmethod
@@ -266,6 +269,7 @@ class QueryResultResource(BaseResource):
         else:
             should_apply_auto_limit = query.options.get("apply_auto_limit", False)
 
+        logger.info("*********** %s", query.data_source.name, query.data_source.type)
         if has_access(query, self.current_user, allow_executing_with_view_only_permissions):
             return run_query(
                 query.parameterized,

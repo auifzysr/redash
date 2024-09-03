@@ -28,7 +28,7 @@ def _job_lock_id(query_hash, data_source_id):
 def _unlock(query_hash, data_source_id):
     redis_connection.delete(_job_lock_id(query_hash, data_source_id))
 
-
+# TODO: add calling dry_run
 def enqueue_query(query, data_source, user_id, is_api_key=False, scheduled_query=None, metadata={}):
     query_hash = gen_query_hash(query)
     logger.info("Inserting job for %s with metadata=%s", query_hash, metadata)
@@ -101,7 +101,11 @@ def enqueue_query(query, data_source, user_id, is_api_key=False, scheduled_query
                 if not scheduled_query:
                     enqueue_kwargs["result_ttl"] = settings.JOB_EXPIRY_TIME
 
-                job = queue.enqueue(execute_query, query, data_source.id, metadata, **enqueue_kwargs)
+                job = None
+                if metadata.pop("dry_run", None):
+                    job = queue.enqueue(dry_run_query, query, data_source.id, metadata, **enqueue_kwargs)
+                else:
+                    job = queue.enqueue(execute_query, query, data_source.id, metadata, **enqueue_kwargs)
 
                 logger.info("[%s] Created new job: %s", query_hash, job.id)
                 pipe.set(
@@ -169,7 +173,6 @@ def _get_size_iterative(dict_obj):
             objects.extend(current)
 
     return size
-
 
 class QueryExecutor:
     def __init__(self, query, data_source_id, user_id, is_api_key, metadata, is_scheduled_query):
@@ -309,4 +312,69 @@ def execute_query(
         ).run()
     except QueryExecutionError as e:
         models.db.session.rollback()
+        return e
+
+class DryRunExecutionError(Exception):
+    pass
+
+class DryRunExecutor(QueryExecutor):
+    def __init__(self, query, data_source_id, user_id, is_api_key, metadata, is_scheduled_query):
+        super(DryRunExecutor, self).__init__(query, data_source_id, user_id, is_api_key, metadata, is_scheduled_query)
+        if self.data_source.type != "bigquery":
+            raise DryRunExecutionError(Exception("dry run is available only by bigquery"))
+
+    def run(self):
+        signal.signal(signal.SIGINT, signal_handler)
+
+        logger.debug("dry running query:\n%s", self.query)
+        self._log_progress("dry_run")
+
+        query_runner = self.data_source.query_runner
+        annotated_query = self._annotate_query(query_runner)
+
+        try:
+            # only bigquery datasource implements dry_run_query
+            data, error = query_runner.dry_run_query(annotated_query, self.user)
+        except Exception as e:
+            if isinstance(e, JobTimeoutException):
+                error = TIMEOUT_MESSAGE
+            else:
+                error = str(e)
+
+            data = None
+            logger.warning("Unexpected error while dry running query:", exc_info=1)
+
+        logger.info(
+            "job=dry_run query_hash=%s ds_id=%d data_length=%s error=[%s]",
+            self.query_hash,
+            self.data_source_id,
+            data and _get_size_iterative(data),
+            error,
+        )
+
+        if error is not None and data is None:
+            raise DryRunExecutionError(error)
+        else:
+            self._log_progress("finished")
+
+        return data     
+
+def dry_run_query(
+    query,
+    data_source_id,
+    metadata,
+    user_id=None,
+    scheduled_query_id=None,
+    is_api_key=False,
+):
+    try:
+        return DryRunExecutor(
+            query,
+            data_source_id,
+            user_id,
+            is_api_key,
+            metadata,
+            scheduled_query_id is None,
+        ).run()
+    except DryRunExecutionError as e:
         return e
