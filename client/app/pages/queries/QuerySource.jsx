@@ -290,6 +290,9 @@ function QuerySource(props) {
                         disabled: !dataSource || !isDryRunAvailable,
                         shortcut: isDryRunAvailable ? "mod+shift+r" : null,
                         onClick: formatQuery,
+                        text: (
+                          <span className="hidden-xs">Dry Run</span>
+                        )
                       }}
                       saveButtonProps={
                         queryFlags.canEdit && {

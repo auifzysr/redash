@@ -69,16 +69,6 @@ export default function EditorControl({
           </Button>
         </ButtonTooltip>
       )}
-      {dryRunButtonProps !== false && (
-        <ButtonTooltip title={dryRunButtonProps.title} shortcut={dryRunButtonProps.shortcut}>
-          <Button
-            className="query-editor-controls-button m-r-5"
-            disabled={dryRunButtonProps.disabled}
-            onClick={dryRunButtonProps.onClick}>
-            {"{{"}&nbsp;{"}}"}
-          </Button>
-        </ButtonTooltip>
-      )}
       {formatButtonProps !== false && (
         <ButtonTooltip title={formatButtonProps.title} shortcut={formatButtonProps.shortcut}>
           <Button
@@ -111,6 +101,19 @@ export default function EditorControl({
             </Select.Option>
           ))}
         </Select>
+      )}
+      {dryRunButtonProps !== false && (
+        <ButtonTooltip title={dryRunButtonProps.title} shortcut={dryRunButtonProps.shortcut}>
+          <Button
+            className="query-editor-controls-button m-l-5"
+            disabled={dryRunButtonProps.disabled}
+            loading={dryRunButtonProps.loading}
+            onClick={dryRunButtonProps.onClick}
+            data-test="ExecuteButton">
+            {!dryRunButtonProps.loading && <span className="zmdi zmdi-play" />}
+            {dryRunButtonProps.text}
+          </Button>
+        </ButtonTooltip>
       )}
       {saveButtonProps !== false && (
         <ButtonTooltip title={saveButtonProps.title} shortcut={saveButtonProps.shortcut}>
