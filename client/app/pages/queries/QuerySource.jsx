@@ -45,7 +45,6 @@ import useUnsavedChangesAlert from "./hooks/useUnsavedChangesAlert";
 
 import "./components/QuerySourceDropdown"; // register QuerySourceDropdown
 import "./QuerySource.less";
-import { ConsoleSqlOutlined } from "@ant-design/icons";
 
 function chooseDataSourceId(dataSourceIds, availableDataSources) {
   availableDataSources = map(availableDataSources, ds => ds.id);

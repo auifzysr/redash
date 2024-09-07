@@ -28,7 +28,7 @@ def _job_lock_id(query_hash, data_source_id):
 def _unlock(query_hash, data_source_id):
     redis_connection.delete(_job_lock_id(query_hash, data_source_id))
 
-# TODO: add calling dry_run
+
 def enqueue_query(query, data_source, user_id, is_api_key=False, scheduled_query=None, metadata={}):
     query_hash = gen_query_hash(query)
     logger.info("Inserting job for %s with metadata=%s", query_hash, metadata)
@@ -173,6 +173,7 @@ def _get_size_iterative(dict_obj):
             objects.extend(current)
 
     return size
+
 
 class QueryExecutor:
     def __init__(self, query, data_source_id, user_id, is_api_key, metadata, is_scheduled_query):

@@ -368,11 +368,9 @@ class BigQuery(BaseQueryRunner):
 
         bigquery_service = self._get_bigquery_service()
         jobs = bigquery_service.jobs()
-
         try:
             data = self._get_total_bytes_processed(jobs, query) / 1000.0 / 1000.0
             error = None
-
         except apiclient.errors.HttpError as e:
             data = None
             if e.resp.status in [400, 404]:
@@ -386,9 +384,7 @@ class BigQuery(BaseQueryRunner):
                     jobId=self.current_job_id,
                     location=self._get_location(),
                 ).execute()
-
             raise
-
         return data, error
 
 register(BigQuery)

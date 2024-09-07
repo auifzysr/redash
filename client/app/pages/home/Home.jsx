@@ -97,7 +97,7 @@ routes.register(
   "Home",
   routeWithUserSession({
     path: "/",
-    title: "Redash???",
+    title: "Redash",
     render: pageProps => <Home {...pageProps} />,
   })
 );
