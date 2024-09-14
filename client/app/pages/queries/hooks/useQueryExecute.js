@@ -19,6 +19,7 @@ const reducer = (prevState, updatedProperty) => ({
 // it slightly to make it suitable for dashboard widgets instead of the other solution it
 // has in there.
 export default function useQueryExecute(query) {
+  // 初期化
   const [executionState, setExecutionState] = useReducer(reducer, {
     queryResult: null,
     isExecuting: false,
@@ -28,28 +29,36 @@ export default function useQueryExecute(query) {
     cancelCallback: null,
     error: null,
   });
-
+  // 初期化
   const queryResultInExecution = useRef(null);
   // Clear executing queryResult when component is unmounted to avoid errors
+    // 初期化
   useEffect(() => {
     return () => {
       queryResultInExecution.current = null;
     };
   }, []);
 
+  // クエリ実行処理を定義する
   const executeQuery = useImmutableCallback((maxAge = 0, queryExecutor) => {
+    // クエリの実行結果を取得する手段をここで定義する
     let newQueryResult;
+    // もし特別にクエリ実行処理が渡されたらそれを実行するオブジェクトをセットする
     if (queryExecutor) {
       newQueryResult = queryExecutor();
     } else {
+      // なければクエリのオブジェクトで自前実行するためのオブジェクトをセットする
       newQueryResult = query.getQueryResult(maxAge);
     }
 
     recordEvent("execute", "query", query.id);
     notifications.getPermissions();
 
+    // 状態更新
+    // 今見てる実行中のクエリはクエリの実行結果の取得方法を設定したもの
     queryResultInExecution.current = newQueryResult;
 
+    // 情報更新
     setExecutionState({
       updatedAt: newQueryResult.getUpdatedAt(),
       executionStatus: newQueryResult.getStatus(),
@@ -61,6 +70,8 @@ export default function useQueryExecute(query) {
       },
     });
 
+    // ステータス変更時に、今実行したクエリが最新のクエリなのかどうか調べて、
+    // そうであるならばクエリ実行時刻を更新する
     const onStatusChange = status => {
       if (queryResultInExecution.current === newQueryResult) {
         setExecutionState({ updatedAt: newQueryResult.getUpdatedAt(), executionStatus: status });
@@ -69,18 +80,24 @@ export default function useQueryExecute(query) {
 
     newQueryResult
       .toPromise(onStatusChange)
+      // 成功ケース
       .then(queryResult => {
+        // 今見てるクエリの結果が実行中のものであるならば
         if (queryResultInExecution.current === newQueryResult) {
           // TODO: this should probably belong in the QueryEditor page.
+          // クエリの実行結果は現在のクエリと同じものであるならば
+          // ???
           if (queryResult && queryResult.query_result.query === query.query) {
             query.latest_query_data_id = queryResult.getId();
             query.queryResult = queryResult;
           }
 
+          // ???けどブラウザ通知させる
           if (executionState.loadedInitialResults) {
             notifications.showNotification("Redash", `${query.name} updated.`);
           }
 
+          // 実行完了のステータスとして更新
           setExecutionState({
             queryResult,
             loadedInitialResults: true,
@@ -92,11 +109,13 @@ export default function useQueryExecute(query) {
         }
       })
       .catch(queryResult => {
+        // エラーになったとき
         if (queryResultInExecution.current === newQueryResult) {
           if (executionState.loadedInitialResults) {
             notifications.showNotification("Redash", `${query.name} failed to run: ${queryResult.getError()}`);
           }
 
+          // 失敗したステータスで状態を更新する
           setExecutionState({
             queryResult,
             loadedInitialResults: true,
@@ -112,12 +131,14 @@ export default function useQueryExecute(query) {
   const queryRef = useRef(query);
   queryRef.current = query;
 
+  // 上から順に実行というわけではない
   useEffect(() => {
     // TODO: this belongs on the query page?
     // loadedInitialResults can be removed if so
     if (queryRef.current.hasResult() || queryRef.current.paramsRequired()) {
       executeQuery(getMaxAge());
     } else {
+      // 実行されたとき
       setExecutionState({ loadedInitialResults: true });
     }
   }, [executeQuery]);
