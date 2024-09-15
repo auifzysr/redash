@@ -88,6 +88,8 @@ def dry_run_query(query, parameters, data_source, query_id, should_apply_auto_li
             "dry_run": True,
         },
     )
+
+    job.mark_dry_run()
     return serialize_job(job)
 
 

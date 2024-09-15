@@ -23,6 +23,14 @@ else:
 
 
 class CancellableJob(BaseJob):
+    def mark_dry_run(self):
+        self.meta["dry_run"] = True
+        self.save_meta()
+
+    @property
+    def is_dry_run(self):
+        return self.meta.get("dry_run", False)
+
     def cancel(self, pipeline=None):
         self.meta["cancelled"] = True
         self.save_meta()
