@@ -1,42 +1,23 @@
 import logging
 
-import unicodedata
-from urllib.parse import quote
-
-import regex
-from flask import make_response, request
+from flask import request
 from flask_login import current_user
 from flask_restful import abort
 
-from redash import models, settings
+from redash import models
 from redash.handlers.base import BaseResource, get_object_or_404, record_event
 from redash.models.parameterized_query import (
     InvalidParameterError,
-    ParameterizedQuery,
     QueryDetachedFromDataSourceError,
-    dropdown_values,
 )
 from redash.permissions import (
     has_access,
-    not_view_only,
-    require_access,
     require_any_of_permission,
-    require_permission,
-    view_only,
 )
 from redash.serializers import (
     serialize_job,
-    serialize_query_result,
-    serialize_query_result_to_dsv,
-    serialize_query_result_to_xlsx,
 )
-from redash.tasks import Job
 from redash.tasks.queries import enqueue_query
-from redash.utils import (
-    collect_parameters_from_request,
-    json_dumps,
-    to_filename,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +42,7 @@ error_messages = {
 # data_source contains type, which should hold "bigquery", can be used to be effective
 # only with bigquery data source
 
-def dry_run_query(query, parameters, data_source, query_id, should_apply_auto_limit, max_age=0):
+def dry_run_query(query, parameters, data_source, query_id, should_apply_auto_limit):
     if not data_source:
         return error_messages["no_data_source"]
 
@@ -83,17 +64,11 @@ def dry_run_query(query, parameters, data_source, query_id, should_apply_auto_li
     if query.missing_params:
         return error_response("Missing parameter value for: {}".format(", ".join(query.missing_params)))
 
-    if max_age == 0:
-        query_result = None
-    else:
-        query_result = models.QueryResult.get_latest(data_source, query_text, max_age)
-
     record_event(
         current_user.org,
         current_user,
         {
             "action": "dry_run_query",
-            "cache": "hit" if query_result else "miss",
             "object_id": data_source.id,
             "object_type": "data_source",
             "query": query_text,
@@ -102,38 +77,25 @@ def dry_run_query(query, parameters, data_source, query_id, should_apply_auto_li
         },
     )
 
-    if query_result:
-        return {"query_result": serialize_query_result(query_result, current_user.is_api_user())}
-    else:
-        job = enqueue_query(
-            query_text,
-            data_source,
-            current_user.id,
-            current_user.is_api_user(),
-            metadata={
-                "Username": current_user.get_actual_user(),
-                "query_id": query_id,
-                "dry_run": True,
-            },
-        )
-        return serialize_job(job)
+    job = enqueue_query(
+        query_text,
+        data_source,
+        current_user.id,
+        current_user.is_api_user(),
+        metadata={
+            "Username": current_user.get_actual_user(),
+            "query_id": query_id,
+            "dry_run": True,
+        },
+    )
+    return serialize_job(job)
 
 
 class QueryBytesProcessedResource(BaseResource):
     @require_any_of_permission(("view_query", "execute_query"))
     def post(self, query_id):
-        params = request.get_json(force=True)
-
-        logger.info(f"called dry run get with params" % (params))
-
         params = request.get_json(force=True, silent=True) or {}
         parameter_values = params.get("parameters", {})
-
-        max_age = params.get("max_age", -1)
-        # max_age might have the value of None, in which case calling int(None) will fail
-        if max_age is None:
-            max_age = -1
-        max_age = int(max_age)
 
         query = get_object_or_404(models.Query.get_by_id_and_org, query_id, self.current_org)
 
@@ -150,7 +112,6 @@ class QueryBytesProcessedResource(BaseResource):
                 query.data_source,
                 query_id,
                 should_apply_auto_limit,
-                max_age,
             )
         else:
             if not query.parameterized.is_safe:

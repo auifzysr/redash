@@ -85,7 +85,6 @@ def enqueue_query(query, data_source, user_id, is_api_key=False, scheduled_query
                 queue = Queue(queue_name)
                 enqueue_kwargs = {
                     "user_id": user_id,
-                    "scheduled_query_id": scheduled_query_id,
                     "is_api_key": is_api_key,
                     "job_timeout": time_limit,
                     "failure_ttl": settings.JOB_DEFAULT_FAILURE_TTL,
@@ -105,6 +104,7 @@ def enqueue_query(query, data_source, user_id, is_api_key=False, scheduled_query
                 if metadata.pop("dry_run", None):
                     job = queue.enqueue(dry_run_query, query, data_source.id, metadata, **enqueue_kwargs)
                 else:
+                    enqueue_kwargs["scheduled_query_id"] = scheduled_query_id
                     job = queue.enqueue(execute_query, query, data_source.id, metadata, **enqueue_kwargs)
 
                 logger.info("[%s] Created new job: %s", query_hash, job.id)
@@ -319,10 +319,10 @@ class DryRunExecutionError(Exception):
     pass
 
 class DryRunExecutor(QueryExecutor):
-    def __init__(self, query, data_source_id, user_id, is_api_key, metadata, is_scheduled_query):
-        super(DryRunExecutor, self).__init__(query, data_source_id, user_id, is_api_key, metadata, is_scheduled_query)
-        if self.data_source.type != "bigquery":
-            raise DryRunExecutionError(Exception("dry run is available only by bigquery"))
+    def __init__(self, query, data_source_id, user_id, is_api_key, metadata):
+        super(DryRunExecutor, self).__init__(query, data_source_id, user_id, is_api_key, metadata, None)
+        if callable(getattr(self.data_source, "dry_run_query", None)) is None:
+            raise DryRunExecutionError(Exception("dry run is not available for this data source"))
 
     def run(self):
         signal.signal(signal.SIGINT, signal_handler)
@@ -365,7 +365,6 @@ def dry_run_query(
     data_source_id,
     metadata,
     user_id=None,
-    scheduled_query_id=None,
     is_api_key=False,
 ):
     try:
@@ -375,7 +374,6 @@ def dry_run_query(
             user_id,
             is_api_key,
             metadata,
-            scheduled_query_id is None,
         ).run()
     except DryRunExecutionError as e:
         return e

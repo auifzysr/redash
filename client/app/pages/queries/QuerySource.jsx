@@ -75,18 +75,6 @@ function QuerySource(props) {
     loadedInitialResults,
   } = useQueryExecute(query);
 
-  const {
-    dryRunResult,
-    isDryRunning: isDryRunning,
-    dryRunStatus,
-    dryRunQuery,
-    dryRunError: dryRunError,
-    dryRunCancelCallback: dryRunCancelCallback,
-    isDryRunCancelling: isDryRunCancelling,
-    dryRunUpdatedAt,
-    loadedInitialDryRunResults,
-  } = useDryRun(query);
-
   const queryResultData = useQueryResultData(queryResult);
 
   const editorRef = useRef(null);
@@ -171,10 +159,6 @@ function QuerySource(props) {
   }, []);
 
   const [selectedText, setSelectedText] = useState(null);
-
-  const doDryRun = useCallback(() => {
-    dryRun()
-  },[query, queryFlags.canExecute, isDryRunExecuting, dryRun])
 
   const doExecuteQuery = useCallback(
     (skipParametersDirtyFlag = false) => {
@@ -305,7 +289,7 @@ function QuerySource(props) {
                           : "Dry run is not supported for your Data Source",
                         disabled: !dataSource || !isDryRunAvailable,
                         shortcut: isDryRunAvailable ? "mod+shift+r" : null,
-                        onClick: doDryRun,
+                        onClick: formatQuery,
                         text: (
                           <span className="hidden-xs">Dry Run</span>
                         )
