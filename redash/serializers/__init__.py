@@ -307,7 +307,6 @@ def serialize_job(job):
     serialized = {
         "job": {
             "id": job.id,
-            "updated_at": updated_at,
             "status": status,
             "error": error,
         }
@@ -316,6 +315,7 @@ def serialize_job(job):
     if job.is_dry_run:
         serialized["job"]["bytes_processed"] = result
     else:
+        serialized["job"]["updated_at"] = updated_at
         serialized["job"]["result"] = result
         serialized["job"]["query_result_id"] = query_result_id
 
