@@ -83,6 +83,7 @@ def enqueue_query(query, data_source, user_id, is_api_key=False, scheduled_query
                 metadata["Queue"] = queue_name
 
                 queue = Queue(queue_name)
+                is_dry_run = metadata.pop("dry_run", None)
                 enqueue_kwargs = {
                     "user_id": user_id,
                     "scheduled_query_id": scheduled_query_id,
@@ -96,6 +97,7 @@ def enqueue_query(query, data_source, user_id, is_api_key=False, scheduled_query
                         "query_id": metadata.get("query_id"),
                         "user_id": user_id,
                     },
+                    "is_dry_run": is_dry_run,
                 }
 
                 if not scheduled_query:
@@ -172,7 +174,7 @@ def _get_size_iterative(dict_obj):
 
 
 class QueryExecutor:
-    def __init__(self, query, data_source_id, user_id, is_api_key, metadata, is_scheduled_query):
+    def __init__(self, query, data_source_id, user_id, is_api_key, metadata, is_scheduled_query, is_dry_run=False):
         self.job = get_current_job()
         self.query = query
         self.data_source_id = data_source_id
@@ -193,6 +195,7 @@ class QueryExecutor:
         if self.is_scheduled_query:
             # Load existing tracker or create a new one if the job was created before code update:
             models.scheduled_queries_executions.update(self.query_model.id)
+        self.is_dry_run = is_dry_run
 
     def run(self):
         signal.signal(signal.SIGINT, signal_handler)
@@ -205,7 +208,10 @@ class QueryExecutor:
         annotated_query = self._annotate_query(query_runner)
 
         try:
-            data, error = query_runner.run_query(annotated_query, self.user)
+            if self.is_dry_run:
+                data, error = query_runner.dry_run_query(annotated_query, self.user)
+            else:
+                data, error = query_runner.run_query(annotated_query, self.user)
         except Exception as e:
             if isinstance(e, JobTimeoutException):
                 error = TIMEOUT_MESSAGE
@@ -297,6 +303,7 @@ def execute_query(
     user_id=None,
     scheduled_query_id=None,
     is_api_key=False,
+    is_dry_run=False
 ):
     try:
         return QueryExecutor(
@@ -306,6 +313,7 @@ def execute_query(
             is_api_key,
             metadata,
             scheduled_query_id is not None,
+            is_dry_run,
         ).run()
     except QueryExecutionError as e:
         models.db.session.rollback()

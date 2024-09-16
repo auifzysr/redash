@@ -56,7 +56,7 @@ error_messages = {
 }
 
 
-def run_query(query, parameters, data_source, query_id, should_apply_auto_limit, max_age=0):
+def run_query(query, parameters, data_source, query_id, should_apply_auto_limit, max_age=0, is_dry_run=False):
     if not data_source:
         return error_messages["no_data_source"]
 
@@ -78,25 +78,35 @@ def run_query(query, parameters, data_source, query_id, should_apply_auto_limit,
     if query.missing_params:
         return error_response("Missing parameter value for: {}".format(", ".join(query.missing_params)))
 
-    if max_age == 0:
+    if max_age == 0 or is_dry_run:
         query_result = None
     else:
         query_result = models.QueryResult.get_latest(data_source, query_text, max_age)
 
+    event_detail = {
+        "cache": "hit" if query_result else "miss",
+        "object_id": data_source.id,
+        "object_type": "data_source",
+        "query": query_text,
+        "query_id": query_id,
+        "parameters": parameters,
+    }
+    if is_dry_run:
+        event_detail["action"] = "dry_run_query"
+    else:
+        event_detail["action"] = "execute_query"
     record_event(
         current_user.org,
         current_user,
-        {
-            "action": "execute_query",
-            "cache": "hit" if query_result else "miss",
-            "object_id": data_source.id,
-            "object_type": "data_source",
-            "query": query_text,
-            "query_id": query_id,
-            "parameters": parameters,
-        },
+        event_detail,
     )
 
+    job_metadata = {
+        "Username": current_user.get_actual_user(),
+        "query_id": query_id,
+    }
+    if is_dry_run:
+        job_metadata["dry_run"] = True
     if query_result:
         return {"query_result": serialize_query_result(query_result, current_user.is_api_user())}
     else:
@@ -105,10 +115,7 @@ def run_query(query, parameters, data_source, query_id, should_apply_auto_limit,
             data_source,
             current_user.id,
             current_user.is_api_user(),
-            metadata={
-                "Username": current_user.get_actual_user(),
-                "query_id": query_id,
-            },
+            metadata=job_metadata,
         )
         return serialize_job(job)
 
@@ -251,6 +258,7 @@ class QueryResultResource(BaseResource):
         """
         params = request.get_json(force=True, silent=True) or {}
         parameter_values = params.get("parameters", {})
+        is_dry_run = params.get("dry_run", False)
 
         max_age = params.get("max_age", -1)
         # max_age might have the value of None, in which case calling int(None) will fail
@@ -274,6 +282,7 @@ class QueryResultResource(BaseResource):
                 query_id,
                 should_apply_auto_limit,
                 max_age,
+                is_dry_run,
             )
         else:
             if not query.parameterized.is_safe:

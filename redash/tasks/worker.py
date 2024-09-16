@@ -33,7 +33,6 @@ class CancellableJob(BaseJob):
     def is_cancelled(self):
         return self.meta.get("cancelled", False)
 
-
 class StatsdRecordingQueue(BaseQueue):
     """
     RQ Queue Mixin that overrides `enqueue_call` to increment metrics via Statsd
