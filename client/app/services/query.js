@@ -149,6 +149,12 @@ export class Query {
     return this.prepareQueryResultExecution(execute, maxAge);
   }
 
+  getQueryResultByDryRun() {
+    const execute = () =>
+      QueryResult.getDryRunByQueryId(this.id, this.getParameters().getExecutionValues());
+    return this.prepareQueryResultExecution(execute, 0);
+  }
+
   getUrl(source, hash) {
     let url = `queries/${this.id}`;
 
