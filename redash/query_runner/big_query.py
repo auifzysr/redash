@@ -383,6 +383,10 @@ class BigQuery(BaseQueryRunner):
                     location=self._get_location(),
                 ).execute()
             raise
-        return data, error
+        return {
+            "metadata": {
+                "data_scanned": data,
+            }
+        }, error
 
 register(BigQuery)
