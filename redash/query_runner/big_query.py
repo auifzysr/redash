@@ -367,7 +367,7 @@ class BigQuery(BaseQueryRunner):
         bigquery_service = self._get_bigquery_service()
         jobs = bigquery_service.jobs()
         try:
-            data = self._get_total_bytes_processed(jobs, query) / 1000.0 / 1000.0
+            data = self._get_total_bytes_processed(jobs, query)
             error = None
         except apiclient.errors.HttpError as e:
             data = None
