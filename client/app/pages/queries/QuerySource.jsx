@@ -175,6 +175,18 @@ function QuerySource(props) {
     [query, queryFlags.canExecute, areParametersDirty, isQueryExecuting, isDirty, selectedText, executeQuery]
   );
 
+  const doExecuteQueryDryRun = useCallback(
+    (skipParametersDirtyFlag = false) => {
+      if (!queryFlags.canExecute || (!skipParametersDirtyFlag && (areParametersDirty || isQueryExecuting))) {
+        return;
+      }
+      executeQuery(null, () => {
+        return query.getQueryResultByDryRun();
+      });
+    },
+    [query, queryFlags.canExecute, areParametersDirty, isQueryExecuting, isDirty, selectedText, executeQuery]
+  );
+
   const [isQuerySaving, setIsQuerySaving] = useState(false);
 
   const doSaveQuery = useCallback(() => {
@@ -281,6 +293,14 @@ function QuerySource(props) {
                         disabled: !dataSource || !isFormatQueryAvailable,
                         shortcut: isFormatQueryAvailable ? "mod+shift+f" : null,
                         onClick: formatQuery,
+                      }}
+                      dryRunButtonProps={{
+                        title: "Dry Run",
+                        disabled: !queryFlags.canExecute || isQueryExecuting || areParametersDirty,
+                        onClick: doExecuteQueryDryRun,
+                        text: (
+                          <span className="hidden-xs">Dry Run</span>
+                        )
                       }}
                       saveButtonProps={
                         queryFlags.canEdit && {

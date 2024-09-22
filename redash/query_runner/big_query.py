@@ -363,5 +363,30 @@ class BigQuery(BaseQueryRunner):
 
         return data, error
 
+    def dry_run_query(self, query, user):
+        bigquery_service = self._get_bigquery_service()
+        jobs = bigquery_service.jobs()
+        try:
+            data = self._get_total_bytes_processed(jobs, query)
+            error = None
+        except apiclient.errors.HttpError as e:
+            data = None
+            if e.resp.status in [400, 404]:
+                error = json_loads(e.content)["error"]["message"]
+            else:
+                error = e.content
+        except (KeyboardInterrupt, InterruptException, JobTimeoutException):
+            if self.current_job_id:
+                self._get_bigquery_service().jobs().cancel(
+                    projectId=self._get_project_id(),
+                    jobId=self.current_job_id,
+                    location=self._get_location(),
+                ).execute()
+            raise
+        return {
+            "metadata": {
+                "data_scanned": data,
+            }
+        }, error
 
 register(BigQuery)

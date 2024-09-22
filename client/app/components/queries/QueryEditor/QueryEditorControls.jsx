@@ -36,6 +36,7 @@ ButtonTooltip.defaultProps = {
 export default function EditorControl({
   addParameterButtonProps,
   formatButtonProps,
+  dryRunButtonProps,
   saveButtonProps,
   executeButtonProps,
   autocompleteToggleProps,
@@ -44,7 +45,7 @@ export default function EditorControl({
 }) {
   useEffect(() => {
     const buttons = filter(
-      [addParameterButtonProps, formatButtonProps, saveButtonProps, executeButtonProps],
+      [addParameterButtonProps, formatButtonProps, dryRunButtonProps, saveButtonProps, executeButtonProps],
       b => b.shortcut && isFunction(b.onClick)
     );
     if (buttons.length > 0) {
@@ -54,7 +55,7 @@ export default function EditorControl({
         KeyboardShortcuts.unbind(shortcuts);
       };
     }
-  }, [addParameterButtonProps, formatButtonProps, saveButtonProps, executeButtonProps]);
+  }, [addParameterButtonProps, formatButtonProps, dryRunButtonProps,saveButtonProps, executeButtonProps]);
 
   return (
     <div className="query-editor-controls">
@@ -101,6 +102,19 @@ export default function EditorControl({
           ))}
         </Select>
       )}
+      {dryRunButtonProps !== false && (
+        <ButtonTooltip title={dryRunButtonProps.title} shortcut={dryRunButtonProps.shortcut}>
+          <Button
+            className="query-editor-controls-button m-l-5"
+            disabled={dryRunButtonProps.disabled}
+            loading={dryRunButtonProps.loading}
+            onClick={dryRunButtonProps.onClick}
+            data-test="ExecuteButton">
+            {!dryRunButtonProps.loading && <span className="zmdi zmdi-play" />}
+            {dryRunButtonProps.text}
+          </Button>
+        </ButtonTooltip>
+      )}
       {saveButtonProps !== false && (
         <ButtonTooltip title={saveButtonProps.title} shortcut={saveButtonProps.shortcut}>
           <Button
@@ -146,6 +160,7 @@ const ButtonPropsPropType = PropTypes.oneOfType([
 EditorControl.propTypes = {
   addParameterButtonProps: ButtonPropsPropType,
   formatButtonProps: ButtonPropsPropType,
+  dryRunButtonProps: ButtonPropsPropType,
   saveButtonProps: ButtonPropsPropType,
   executeButtonProps: ButtonPropsPropType,
   autocompleteToggleProps: PropTypes.oneOfType([

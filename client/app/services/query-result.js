@@ -465,6 +465,25 @@ class QueryResult {
     return queryResult;
   }
 
+  static getDryRunByQueryId(id, parameters) {
+    const queryResult = new QueryResult();
+
+    axios
+      .post(`api/queries/${id}/results`, { id, parameters, apply_auto_limit: false, max_age: 0, dry_run: true })
+      .then(response => {
+        queryResult.update(response);
+
+        if ("job" in response) {
+          queryResult.refreshStatus(id, parameters);
+        }
+      })
+      .catch(error => {
+        handleErrorResponse(queryResult, error);
+      });
+
+    return queryResult;
+  }
+
   static get(dataSourceId, query, parameters, applyAutoLimit, maxAge, queryId) {
     const queryResult = new QueryResult();
 
